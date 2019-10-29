@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Inception V1 model for Keras.
-Note that the input preprocessing function is different from the the VGG16 and ResNet models (same as Xception).
+Note that the input preprocessing function is different from the the VGG16 and Resnet models (same as Xception).
 Also that (currently) the output predictions are for 1001 classes (with the 0 class being 'background'), 
 so require a shift compared to the other models here.
 # Reference
@@ -22,6 +22,7 @@ from keras.layers import MaxPooling2D
 from keras.layers import AveragePooling2D
 from keras.layers import Dropout
 from keras.layers import Flatten
+from keras.layers import Dense
 from keras.layers import GlobalAveragePooling2D
 from keras.layers import GlobalMaxPooling2D
 from keras.engine.topology import get_source_inputs
@@ -113,12 +114,12 @@ def InceptionV1(include_top=True,
     """Instantiates the Inception v1 architecture.
     This architecture is defined in:
         Going deeper with convolutions
-        Christian Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed,
+        Christian Szegedy, Wei Liu, Yangqing Jia, Pierre Sermax, Scott Reed,
         Dragomir Anguelov, Dumitru Erhan, Vincent Vanhoucke, Andrew Rabinovich.
         http://arxiv.org/abs/1409.4842v1
     
     Optionally loads weights pre-trained
-    on ImageNet. Note that when using TensorFlow,
+    on Imagex. Note that when using TensorFlow,
     for best performance you should set
     `image_data_format="channels_last"` in your Keras config
     at ~/.keras/keras.json.
@@ -129,9 +130,9 @@ def InceptionV1(include_top=True,
     Note that the default input image size for this model is 224x224.
     Arguments:
         include_top: whether to include the fully-connected
-            layer at the top of the network.
+            layer at the top of the xwork.
         weights: one of `None` (random initialization)
-            or "imagenet" (pre-training on ImageNet).
+            or "imagex" (pre-training on Imagex).
         input_tensor: optional Keras tensor (i.e. output of `layers.Input()`)
             to use as image input for the model.
         input_shape: optional shape tuple, only to be specified
@@ -163,8 +164,8 @@ def InceptionV1(include_top=True,
     """
     if weights not in {'imagenet', None}:
         raise ValueError('The `weights` argument should be either '
-                         '`None` (random initialization) or `imagenet` '
-                         '(pre-training on ImageNet).')
+                         '`None` (random initialization) or `imagex` '
+                         '(pre-training on Imagex).')
 
     if weights == 'imagenet' and include_top and classes != 1001:
         raise ValueError('If using `weights` as imagenet with `include_top`'
@@ -227,19 +228,32 @@ def InceptionV1(include_top=True,
         x = AveragePooling2D((7, 7), strides=(1, 1), padding='valid')(x)  
         
         # 'Dropout_0b'
-        x = Dropout(0.2)(x)  # slim has keep_prob (@0.8), keras uses drop_fraction
+        #x = Dropout(0.2)(x)  # slim has keep_prob (@0.8), keras uses drop_fraction
         
         #logits = conv2d_bn(x,  classes, 1, 1, strides=(1, 1), padding='valid', name='Logits',
         #                   normalizer=False, activation=None, )  
         
         # Write out the logits explictly, since it is pretty different
-        x = Conv2D(classes, (1, 1), strides=(1,1), padding='valid', use_bias=True, name='Logits')(x)
+        # Uncomment
+        #x = Conv2D(classes, (1, 1), strides=(1,1), padding='valid', use_bias=True, name='Logits')(x)
         
-        x = Flatten(name='Logits_flat')(x)
+        # Uncomment
+        #x = Flatten(name='Logits_flat')(x)
+        
         #x = x[:, 1:]  # ??Shift up so that first class ('blank background') vanishes
         # Would be more efficient to strip off position[0] from the weights+bias terms directly in 'Logits'
         
-        x = Activation('softmax', name='Predictions')(x)
+        # Uncomment
+        #x = Activation('softmax', name='Predictions')(x)
+        x = Conv2D(1024, 1, strides=1, padding='same', activation='relu')(x)
+        x = Conv2D(1152, 2, strides=1, padding='same', activation='relu')(x)
+#         x = Dropout(.6)(x)
+        x = Dropout(.2)(x)
+        x = MaxPooling2D((2, 2), padding='same')(x)
+        
+        x = Flatten()(x)
+        x = Dense(1152, activation='relu')(x)
+        x = Dense(classes, activation='softmax')(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D(name='global_pooling')(x)
